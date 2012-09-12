@@ -16,3 +16,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+# download tar.gz
+
+bash "install_apollo" do
+  cwd "/opt"
+  code <<-EOH
+    cd /opt
+    tar -zxf apache-apollo-#{node['apollo']['version']}-unix-distro.tar.gz
+    chown -R root:root /opt/apache-apollo-#{node['apollo']['version']}
+    cd /var/lib
+    /opt/apache-apollo-#{node['apollo']['version']}/bin/apollo create spabroker
+    ln -s "/var/lib/spabroker/bin/apollo-broker-service" /etc/init.d/
+    /etc/init.d/apollo-broker-service start
+  EOH
+  action :nothing
+end
+
+remote_file "/opt/apache-apollo-#{node['apollo']['version']}-unix-distro.tar.gz" do
+  not_if do
+    File.exists? "/opt/apache-apollo-#{node['apollo']['version']}/"
+  end
+  
+  source "http://apache.mirrors.tds.net/activemq/activemq-apollo/#{node['apollo']['version']}/apache-apollo-#{node['apollo']['version']}-unix-distro.tar.gz"
+  action :create_if_missing
+  notifies :run, "bash[install_apollo]", :immediately
+end
+
+# extract
+# run 'install' command
