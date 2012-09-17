@@ -23,9 +23,11 @@ bash "install_apollo" do
   cwd "/opt"
   code <<-EOH
     cd /opt
+    export PATH=$PATH:/usr/lib/jvm/java-1.6.0-openjdk-1.6.0.0.x86_64/bin/
     tar -zxf apache-apollo-#{node['apollo']['version']}-unix-distro.tar.gz
     chown -R root:root /opt/apache-apollo-#{node['apollo']['version']}
     cd /var/lib
+    chmod -R 755 /opt/apache-apollo-#{node['apollo']['version']}/bin
     /opt/apache-apollo-#{node['apollo']['version']}/bin/apollo create spabroker
     ln -s "/var/lib/spabroker/bin/apollo-broker-service" /etc/init.d/
     /etc/init.d/apollo-broker-service start
