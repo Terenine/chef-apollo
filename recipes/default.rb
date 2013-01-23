@@ -18,25 +18,15 @@
 #
 
 # download tar.gz
-bash "chkconfig_add" do
-  cwd "/"
-  code <<-EOH
-chkconfig --add apollo-broker-service
-chkconfig apollo-broker-service on
-EOH
-  action :nothing
-end
-
-
-ruby_block "chkconfig_edit" do
-  block do
-    file = Chef::Util::FileEdit.new("/var/lib/spabroker/bin/apollo-broker-service")
-    file.search_file_replace(/APOLLO_USER="root"/, "# chkconfig:   - 57 47\nAPOLLO_USER=\"root\"")
-    file.write_file
+remote_file "/opt/apache-apollo-#{node['apollo']['version']}-unix-distro.tar.gz" do
+  not_if do
+    File.exists? "/opt/apache-apollo-#{node['apollo']['version']}/"
   end
-  notifies :run, "bash[chkconfig_add]", :immediately
-end
 
+  source "http://apache.mirrors.tds.net/activemq/activemq-apollo/#{node['apollo']['version']}/apache-apollo-#{node['apollo']['version']}-unix-distro.tar.gz"
+#  action :create_if_missing
+#  notifies :run, "bash[install_apollo]", :immediately
+end
 
 bash "install_apollo" do
   cwd "/opt"
@@ -51,19 +41,30 @@ bash "install_apollo" do
     ln -s "/var/lib/spabroker/bin/apollo-broker-service" /etc/init.d/
     /etc/init.d/apollo-broker-service start
   EOH
-  action :nothing
-  notifies :run, "ruby_block[chkconfig_edit]", :immediately
+#  action :nothing
+#  notifies :run, "ruby_block[chkconfig_edit]", :immediately
 end
 
-remote_file "/opt/apache-apollo-#{node['apollo']['version']}-unix-distro.tar.gz" do
-  not_if do
-    File.exists? "/opt/apache-apollo-#{node['apollo']['version']}/"
+
+ruby_block "chkconfig_edit" do
+  block do
+    file = Chef::Util::FileEdit.new("/var/lib/spabroker/bin/apollo-broker-service")
+    file.search_file_replace(/APOLLO_USER="root"/, "# chkconfig:   - 57 47\nAPOLLO_USER=\"root\"")
+    file.write_file
   end
-
-  source "http://apache.mirrors.tds.net/activemq/activemq-apollo/#{node['apollo']['version']}/apache-apollo-#{node['apollo']['version']}-unix-distro.tar.gz"
-  action :create_if_missing
-  notifies :run, "bash[install_apollo]", :immediately
+#  notifies :run, "bash[chkconfig_add]", :immediately
 end
+
+bash "chkconfig_add" do
+  cwd "/"
+  code <<-EOH
+chkconfig --add apollo-broker-service
+chkconfig apollo-broker-service on
+EOH
+#  action :nothing
+end
+
+
 
 # extract
 # run 'install' command
