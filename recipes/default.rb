@@ -35,11 +35,20 @@ bash "install_apollo" do
   action :nothing
 end
 
+ruby_block "make service chkconfig compliant" do
+  block do
+    file = Chef::Util::FileEdit.new("/var/lib/spabroker/bin/apollo-broker-service")
+    file.insert_line_before_match(/APOLLO_USER="root"/, "# chkconfig:   - 57 47")
+    file.write_file
+  end
+end
+
+
 remote_file "/opt/apache-apollo-#{node['apollo']['version']}-unix-distro.tar.gz" do
   not_if do
     File.exists? "/opt/apache-apollo-#{node['apollo']['version']}/"
   end
-  
+
   source "http://apache.mirrors.tds.net/activemq/activemq-apollo/#{node['apollo']['version']}/apache-apollo-#{node['apollo']['version']}-unix-distro.tar.gz"
   action :create_if_missing
   notifies :run, "bash[install_apollo]", :immediately
