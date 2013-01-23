@@ -19,21 +19,14 @@
 
 # download tar.gz
 
-ruby_block "make service chkconfig compliant" do
-  block do
-    file = Chef::Util::FileEdit.new("/var/lib/spabroker/bin/apollo-broker-service")
-    file.insert_line_before_match(/APOLLO_USER="root"/, "# chkconfig:   - 57 47")
-    file.write_file
+remote_file "/opt/apache-apollo-#{node['apollo']['version']}-unix-distro.tar.gz" do
+  not_if do
+    File.exists? "/opt/apache-apollo-#{node['apollo']['version']}/"
   end
-end
 
-bash "add apollo to chkconfig" do
-  cwd "/"
-  code <<-EOH
-chkconfig --add apollo-broker-service
-chkconfig apollo-broker-service on
-EOH
-  action :nothing
+  source "http://apache.mirrors.tds.net/activemq/activemq-apollo/#{node['apollo']['version']}/apache-apollo-#{node['apollo']['version']}-unix-distro.tar.gz"
+  action :create_if_missing
+  notifies :run, "bash[install_apollo]", :immediately
 end
 
 bash "install_apollo" do
@@ -50,16 +43,25 @@ bash "install_apollo" do
     /etc/init.d/apollo-broker-service start
   EOH
   action :nothing
+  notifies :run, "ruby_block[chkconfig_edit]", :immediately
 end
 
-remote_file "/opt/apache-apollo-#{node['apollo']['version']}-unix-distro.tar.gz" do
-  not_if do
-    File.exists? "/opt/apache-apollo-#{node['apollo']['version']}/"
+ruby_block "chkconfig_edit" do
+  block do
+    file = Chef::Util::FileEdit.new("/var/lib/spabroker/bin/apollo-broker-service")
+    file.insert_line_before_match(/APOLLO_USER="root"/, "# chkconfig:   - 57 47")
+    file.write_file
   end
+  notifies :run, "bash[chkconfig_add]", :immediately
+end
 
-  source "http://apache.mirrors.tds.net/activemq/activemq-apollo/#{node['apollo']['version']}/apache-apollo-#{node['apollo']['version']}-unix-distro.tar.gz"
-  action :create_if_missing
-  notifies :run, "bash[install_apollo]", :immediately
+bash "chkconfig_add" do
+  cwd "/"
+  code <<-EOH
+chkconfig --add apollo-broker-service
+chkconfig apollo-broker-service on
+EOH
+  action :nothing
 end
 
 # extract
