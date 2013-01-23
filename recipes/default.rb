@@ -31,7 +31,7 @@ end
 ruby_block "chkconfig_edit" do
   block do
     file = Chef::Util::FileEdit.new("/var/lib/spabroker/bin/apollo-broker-service")
-    file.insert_line_before_match(/APOLLO_USER="root"/, "# chkconfig:   - 57 47")
+    file.search_file_replace(/APOLLO_USER="root"/, "# chkconfig:   - 57 47\nAPOLLO_USER=\"root\"")
     file.write_file
   end
   notifies :run, "bash[chkconfig_add]", :immediately
