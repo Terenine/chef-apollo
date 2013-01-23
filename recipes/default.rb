@@ -43,6 +43,16 @@ ruby_block "make service chkconfig compliant" do
   end
 end
 
+bash "add apollo to chkconfig" do
+  cwd "/"
+  code <<-EOH
+chkconfig --add apollo-broker-service
+chkconfig apollo-broker-service on
+EOH
+  action :nothing
+end
+
+
 
 remote_file "/opt/apache-apollo-#{node['apollo']['version']}-unix-distro.tar.gz" do
   not_if do
