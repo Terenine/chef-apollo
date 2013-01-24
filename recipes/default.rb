@@ -16,30 +16,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-begin
+
+# download tar.gz
+remote_file "/opt/apache-apollo-#{node['apollo']['version']}-unix-distro.tar.gz" do
   not_if do
-    File.exists? "/var/lib/spabroker/bin/apollo-broker-service"
+    File.exists? "/opt/apache-apollo-#{node['apollo']['version']}/"
   end
 
+  source "http://apache.mirrors.tds.net/activemq/activemq-apollo/#{node['apollo']['version']}/apache-apollo-#{node['apollo']['version']}-unix-distro.tar.gz"
+#  action :create_if_missing
+#  notifies :run, "bash[install_apollo]", :immediately
+end
 
-  # download tar.gz
-  remote_file "/opt/apache-apollo-#{node['apollo']['version']}-unix-distro.tar.gz" do
-    not_if do
-      File.exists? "/opt/apache-apollo-#{node['apollo']['version']}/"
-    end
+@already_here = false
 
-    source "http://apache.mirrors.tds.net/activemq/activemq-apollo/#{node['apollo']['version']}/apache-apollo-#{node['apollo']['version']}-unix-distro.tar.gz"
-    #  action :create_if_missing
-    #  notifies :run, "bash[install_apollo]", :immediately
+bash "install_apollo" do
+  @already_here = File.exists? "/var/lib/spabroker/bin/apollo-broker-service"
+  not_if do
+    @already_here
   end
 
-  bash "install_apollo" do
-    not_if do
-      File.exists? "/var/lib/spabroker/bin/apollo-broker-service"
-    end
-
-    cwd "/opt"
-    code <<-EOH
+  cwd "/opt"
+  code <<-EOH
     cd /opt
     export PATH=$PATH:/usr/lib/jvm/java-1.6.0-openjdk-1.6.0.0.x86_64/bin/
     tar -zxf apache-apollo-#{node['apollo']['version']}-unix-distro.tar.gz
@@ -50,30 +48,38 @@ begin
     ln -s "/var/lib/spabroker/bin/apollo-broker-service" /etc/init.d/
     /etc/init.d/apollo-broker-service start
   EOH
-    #  action :nothing
-    #  notifies :run, "ruby_block[chkconfig_edit]", :immediately
+#  action :nothing
+#  notifies :run, "ruby_block[chkconfig_edit]", :immediately
+end
+
+
+ruby_block "chkconfig_edit" do
+  not_if do
+    @already_here
   end
 
+  block do
+    file = Chef::Util::FileEdit.new("/var/lib/spabroker/bin/apollo-broker-service")
+    file.search_file_replace(/APOLLO_USER="root"/, "# chkconfig:   - 57 47\nAPOLLO_USER=\"root\"")
+    file.write_file
+  end
+#  notifies :run, "bash[chkconfig_add]", :immediately
+end
 
-  ruby_block "chkconfig_edit" do
-    block do
-      file = Chef::Util::FileEdit.new("/var/lib/spabroker/bin/apollo-broker-service")
-      file.search_file_replace(/APOLLO_USER="root"/, "# chkconfig:   - 57 47\nAPOLLO_USER=\"root\"")
-      file.write_file
-    end
-    #  notifies :run, "bash[chkconfig_add]", :immediately
+bash "chkconfig_add" do
+  not_if do
+    @already_here
   end
 
-  bash "chkconfig_add" do
-    cwd "/"
-    code <<-EOH
+  cwd "/"
+  code <<-EOH
 chkconfig --add apollo-broker-service
 chkconfig apollo-broker-service on
 EOH
-    #  action :nothing
-  end
-
+#  action :nothing
 end
+
+
 
 # extract
 # run 'install' command
